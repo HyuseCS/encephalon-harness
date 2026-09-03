@@ -14,6 +14,7 @@ You are in this vault. Follow `AGENTS.md` for all writing. This skill adds one o
 - (none) — full interactive sync: repos + raw/ inbox.
 - `headless` — repos only. No questions, no inbox ingest. Used by the systemd timer.
 - `add <url>` — clone a remote repo and ingest it. See "Adding a repo by URL" below.
+- `memories` — optional pass, only when asked: merge Claude Code project memories into the vault. See "Memories pass" below. Never runs as part of a plain or headless sync.
 - `on` — run `systemctl --user enable --now encephalon-sync.timer`, then report status.
 - `off` — run `systemctl --user disable --now encephalon-sync.timer`, then report status.
 - `status` — report: timer state (`systemctl --user status encephalon-sync.timer`), next run time (`systemctl --user list-timers encephalon-sync.timer`), last lines of `scripts/sync.log`, and count of files waiting at the root of `raw/`.
@@ -30,6 +31,16 @@ You are in this vault. Follow `AGENTS.md` for all writing. This skill adds one o
 4. Delete the temp clone.
 
 From then on the weekly sync tracks it through the GitHub API — nothing is stored on disk.
+
+## Memories pass (`/sync memories`)
+
+Optional and explicit — a plain `/sync` never does this. Claude Code only (other tools: skip).
+
+1. List `~/.claude/projects/*/memory/*.md`. The directory name encodes the project path; map it to the vault page via your Repository Map page.
+2. For each memory file changed since the target page's `updated:` date: read it, keep only durable facts (skip session-scoped notes), and merge them into the matching project page. Cite the memory file in `source:`.
+3. Contradiction check per AGENTS.md: a memory that disagrees with a page gets a `## Conflicts` entry, not a silent overwrite.
+4. Never read session transcripts (`*.jsonl`).
+5. Bookkeeping as usual: index/log if pages changed, one commit.
 
 ## Sync procedure
 
