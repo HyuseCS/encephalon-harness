@@ -1,0 +1,8 @@
+{
+  "name": "encephalon-harness",
+  "description": "Agent harness for LLM-maintained knowledge vaults: /ingest, /lint, /sync with territory-based parallel workers. Universal — degrades to sequential on single-thread tools.",
+  "version": "0.1.0",
+  "author": {
+    "name": "HyuseCS"
+  }
+}

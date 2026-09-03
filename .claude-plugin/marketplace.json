@@ -1,0 +1,13 @@
+{
+  "name": "encephalon-harness",
+  "owner": {
+    "name": "HyuseCS"
+  },
+  "plugins": [
+    {
+      "name": "encephalon-harness",
+      "source": "./",
+      "description": "Agent harness for LLM-maintained knowledge vaults: /ingest, /lint, /sync with territory-based parallel workers."
+    }
+  ]
+}

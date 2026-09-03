@@ -1,0 +1,9 @@
+[Unit]
+Description=Weekly vault sync
+
+[Timer]
+OnCalendar=Sun 20:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

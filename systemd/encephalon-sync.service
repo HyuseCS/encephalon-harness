@@ -1,0 +1,6 @@
+[Unit]
+Description=vault sync (headless Claude Code run)
+
+[Service]
+Type=oneshot
+ExecStart=/path/to/your/vault/scripts/sync.sh
