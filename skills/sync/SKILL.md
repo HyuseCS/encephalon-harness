@@ -71,6 +71,19 @@ Optional and explicit — a plain `/sync` never does this. Claude Code only (oth
      Name in the report any remote branch other than the target that moved more recently
      than the hub note's `updated:` date. The checked-out branch is not always where the
      newest work is, and a stamp taken from one feature branch will not see the next one.
+   - **Branch switch — check this before you read anything.** If `synced_commit:` is not
+     an ancestor of the target (`git -C <path> merge-base --is-ancestor <sha> <target>`
+     fails), the repo is on a different branch from the one the last sync read. This is
+     normal on a repo with a branch per phase. Do not treat the whole gap as new work:
+     - Diff from the merge-base instead — `git -C <path> merge-base <sha> <target>` — so
+       you read what the branch actually adds, not unrelated history you already filed.
+     - Check commit dates. A branch can be *behind* in time while being unreachable from
+       the stamp: 42 commits that are all older than the stamp are a switch to older work,
+       not new work, and must not be re-ingested.
+     - Only restamp when the target genuinely carries newer work. Never overwrite a stamp
+       with the tip of an older branch — that throws away the anchor for the work you
+       already read, and the next sync cannot tell what it missed.
+     - Name the switch in the report, with both branch names.
    **Remote** (`github:owner/repo` — no local copy exists):
    - Diff with one API call: `gh api repos/owner/repo/compare/<synced_commit>...HEAD --jq '{total: .total_commits, files: [.files[].filename], msgs: [.commits[].commit.message]}'`. `total: 0` → up to date, skip.
    - Read a changed file with `gh api -H "Accept: application/vnd.github.raw" repos/owner/repo/contents/<path>`. Read only the files the diff names — docs first.
