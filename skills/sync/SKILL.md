@@ -50,8 +50,27 @@ Optional and explicit — a plain `/sync` never does this. Claude Code only (oth
    **Local** (an absolute path on disk):
    - Find its hub note (the `[[Note]]` in the map row). Read its frontmatter key `synced_commit:`.
    - If the repo path does not exist on disk: flag it in the final report, touch nothing.
-   - If `synced_commit:` exists: run `git -C <path> log <sha>..HEAD --oneline --stat`. Empty output → up to date, skip.
-   - If `synced_commit:` is missing but the hub note exists (first run): use `git -C <path> log --since=<hub note's updated: date> --oneline --stat` instead.
+   - **Fetch first:** `git -C <path> fetch --quiet --all`. Without this the sync only ever
+     sees the working copy on this machine, so work pushed from another machine never
+     reaches the vault. On failure — no network, no remote, auth refused — flag the repo
+     as "fetch failed, read from disk only", fall back to the local-only diff, and carry
+     on. Never block the sync on a fetch, and never retry it in a loop.
+   - **Pick the diff target.** Get the upstream of the checked-out branch with
+     `git -C <path> rev-parse --abbrev-ref '@{upstream}'`. No upstream → the target is
+     `HEAD`, as before. Otherwise choose by how the two relate:
+     - Upstream is ahead (HEAD is an ancestor of it) → the target is the upstream tip.
+       This is the "pushed from another machine" case.
+     - HEAD is ahead of, or equal to, the upstream → the target is `HEAD`. Unpushed local
+       work still counts as real.
+     - The two have diverged → read both `<sha>..HEAD` and `<sha>..<upstream>`, stamp
+       `HEAD`, and flag the divergence in the report with both commit counts.
+   - If `synced_commit:` exists: run `git -C <path> log <sha>..<target> --oneline --stat`. Empty output → up to date, skip.
+   - If `synced_commit:` is missing but the hub note exists (first run): use `git -C <path> log --since=<hub note's updated: date> --oneline --stat <target>` instead.
+   - **Report only, never ingest:** after the fetch, run
+     `git -C <path> for-each-ref --sort=-committerdate --count=5 --format='%(refname:short) %(committerdate:short)' refs/remotes`.
+     Name in the report any remote branch other than the target that moved more recently
+     than the hub note's `updated:` date. The checked-out branch is not always where the
+     newest work is, and a stamp taken from one feature branch will not see the next one.
    **Remote** (`github:owner/repo` — no local copy exists):
    - Diff with one API call: `gh api repos/owner/repo/compare/<synced_commit>...HEAD --jq '{total: .total_commits, files: [.files[].filename], msgs: [.commits[].commit.message]}'`. `total: 0` → up to date, skip.
    - Read a changed file with `gh api -H "Accept: application/vnd.github.raw" repos/owner/repo/contents/<path>`. Read only the files the diff names — docs first.
@@ -59,7 +78,7 @@ Optional and explicit — a plain `/sync` never does this. Claude Code only (oth
    - API or network failure → flag the repo in the report and skip it; never guess.
    **Both**: if the hub note does not exist, this is a **new repo** — full ingest per AGENTS.md section 5 (remote: via a temp shallow clone in the scratchpad, deleted after; headless: keep it to doc files and structure, no deep code reading).
    - For repos with new commits: read the commit messages, the changed files that matter (docs first: README, PRODUCT.md, DESIGN.md, AGENTS.md, process/, docs/ — then source files the commits touched), and update the affected vault pages. Distill, never dump. Run the contradiction check from AGENTS.md.
-   - Stamp the hub note: set `updated:` to today and `synced_commit:` to the repo's current HEAD sha (local: `git -C <path> rev-parse HEAD`; remote: the API sha from above). Stamp even when you skipped for "no new commits" only if the key was missing.
+   - Stamp the hub note: set `updated:` to today and `synced_commit:` to the sha you actually read up to (local: the diff target picked above, resolved with `git -C <path> rev-parse <target>`; remote: the API sha from above). Stamp even when you skipped for "no new commits" only if the key was missing.
 4. **Interactive only**: list files at the root of `raw/` (not `raw/ingested/`). For each, run the normal Ingest operation from AGENTS.md — takeaways to the human first, then pages, then move the file into `raw/ingested/`. **Headless**: do not touch them; count them for the report.
 5. Update `index.md` for any pages added or removed. Append one entry to `log.md` summarizing the run (repos checked, repos updated, pages touched, inbox count).
 6. Commit everything as one commit. Message describes the change (e.g. `Sync: update Parasat and Veent HRIS pages`). No push. No co-author trailer, no AI attribution.
