@@ -30,7 +30,7 @@ cp -r harness/ /path/to/your/vault/harness/
 ### Claude Code (plugin)
 
 ```sh
-claude plugin marketplace add <your-github-user>/encephalon-harness
+claude plugin marketplace add HyuseCS/encephalon-harness
 claude plugin install encephalon-harness
 ```
 
